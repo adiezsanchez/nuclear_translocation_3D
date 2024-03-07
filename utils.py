@@ -81,6 +81,26 @@ def return_stacks_per_position_id(images_per_position, position_id):
     return ch00_stack, ch01_stack
 
 
+def make_isotropic(image, scaling_x_um, scaling_y_um, scaling_z_um):
+    """Scale the image with the voxel size used as scaling factor to get an image stack with isotropic voxels"""
+    # Set the x and y scaling to 1 to avoid resizing (compressing the input image), this way the rescaling factor is only applied to z
+    multiplier = 1 / scaling_x_um
+
+    scaling_x_um = scaling_x_um * multiplier
+    scaling_y_um = scaling_y_um * multiplier
+    scaling_z_um = scaling_z_um * multiplier
+
+    image_resampled = cle.scale(
+        image,
+        factor_x=scaling_x_um,
+        factor_y=scaling_y_um,
+        factor_z=scaling_z_um,
+        auto_size=True,
+    )
+
+    return image_resampled
+
+
 def save_stacks(images_per_position, output_dir="./output/processed_stacks"):
     """Takes a images_per_position from read_images as input, stacks them on a per channel basis and saves the resulting images on a per position basis"""
     for position_id, files in images_per_position.items():
