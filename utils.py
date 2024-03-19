@@ -100,29 +100,48 @@ def make_isotropic(image, scaling_x_um, scaling_y_um, scaling_z_um):
 
     return image_resampled
 
-def extract_nuclei_labels(ch00_stack, 
-                          scaling_x_um = 0.342, 
-                          scaling_y_um = 0.342, 
-                          scaling_z_um = 0.663, 
-                          top_hat_radius = 5, 
-                          gaussian_sigma = 2, 
-                          voronoi_otsu_spot_sigma = 10,
-                          voronoi_otsu_outline_sigma = 1,
-                          closing_labels_radius = 5,
-                          erosion_labels_radius = 3):
+
+def extract_nuclei_labels(
+    ch00_stack,
+    scaling_x_um=0.342,
+    scaling_y_um=0.342,
+    scaling_z_um=0.663,
+    top_hat_radius=5,
+    gaussian_sigma=2,
+    voronoi_otsu_spot_sigma=10,
+    voronoi_otsu_outline_sigma=1,
+    closing_labels_radius=5,
+    erosion_labels_radius=3,
+):
     """Takes a nuclei stack and analysis parameters as inputs and outputs a .cle OCLarray as output containing the post-processed nuclei labels"""
-    
+
     # Rescale the ch00_stack (nuclei) and ch01_stack to make data isotropic in order to apply voronoi_otsu labeling afterwards
-    nuclei_resampled = make_isotropic(ch00_stack, scaling_x_um, scaling_y_um, scaling_z_um)
+    nuclei_resampled = make_isotropic(
+        ch00_stack, scaling_x_um, scaling_y_um, scaling_z_um
+    )
 
     # Remove background with a top_hat_filter
-    background_subtracted = cle.top_hat_box(nuclei_resampled, radius_x=top_hat_radius, radius_y=top_hat_radius, radius_z=top_hat_radius)
+    background_subtracted = cle.top_hat_box(
+        nuclei_resampled,
+        radius_x=top_hat_radius,
+        radius_y=top_hat_radius,
+        radius_z=top_hat_radius,
+    )
 
     # Apply gaussian blur to prevent the formation of holes upon labeling
-    post_gaussian = cle.gaussian_blur(background_subtracted, sigma_x=gaussian_sigma, sigma_y=gaussian_sigma, sigma_z=gaussian_sigma)
+    post_gaussian = cle.gaussian_blur(
+        background_subtracted,
+        sigma_x=gaussian_sigma,
+        sigma_y=gaussian_sigma,
+        sigma_z=gaussian_sigma,
+    )
 
     # Voronoi-Otsu labeling
-    segmented = cle.voronoi_otsu_labeling(post_gaussian, spot_sigma=voronoi_otsu_spot_sigma, outline_sigma=voronoi_otsu_outline_sigma)
+    segmented = cle.voronoi_otsu_labeling(
+        post_gaussian,
+        spot_sigma=voronoi_otsu_spot_sigma,
+        outline_sigma=voronoi_otsu_outline_sigma,
+    )
 
     # Close holes in labels to avoid false emtpy volumes within the nuclei
     closed_labels = cle.closing_labels(segmented, radius=closing_labels_radius)
@@ -142,8 +161,9 @@ def extract_nuclei_labels(ch00_stack,
 
     # Once the top and bottom slices are empty (no labels) we can apply remove on edges
     remove_border_labels = nsbatwm.remove_labels_on_edges(eroded_labels_np)
-    
+
     return remove_border_labels
+
 
 def measure_intensity(nuclei_labels, marker_resampled):
     """Takes the resampled (isotropic) nuclei labels and marker_resampled (intensity image) as inputs and outputs a dataframe with per nucleus stats"""
@@ -152,12 +172,23 @@ def measure_intensity(nuclei_labels, marker_resampled):
     marker_resampled_np = cle.pull(marker_resampled)
 
     # Extract regionprops from labels not touching the borders
-    props = regionprops_table(label_image=nuclei_labels_np, intensity_image=marker_resampled_np, properties=["label", "intensity_mean", "intensity_max", "centroid", "area_filled"])
+    props = regionprops_table(
+        label_image=nuclei_labels_np,
+        intensity_image=marker_resampled_np,
+        properties=[
+            "label",
+            "intensity_mean",
+            "intensity_max",
+            "centroid",
+            "area_filled",
+        ],
+    )
 
     # Construct a dataframe
     df = pd.DataFrame(props)
 
     return df
+
 
 def save_stacks(images_per_position, output_dir="./output/processed_stacks"):
     """Takes a images_per_position from read_images as input, stacks them on a per channel basis and saves the resulting images on a per position basis"""
@@ -186,23 +217,3 @@ def save_stacks(images_per_position, output_dir="./output/processed_stacks"):
         # Save the resulting minimum projection
         tifffile.imwrite(output_path_ch00, ch00_stack)
         tifffile.imwrite(output_path_ch01, ch01_stack)
-
-
-def return_stacks(images_per_position):
-    """Takes a images_per_position from read_images as input, stacks them on a per channel basis and returns the stacks"""
-    for position_id, files in images_per_position.items():
-
-        ch00_paths = []
-        ch01_paths = []
-
-        for image_path in images_per_position[position_id]:
-            if "ch00" in image_path:
-                ch00_paths.append(image_path)
-            elif "ch01" in image_path:
-                ch01_paths.append(image_path)
-
-        # Generate the stacks
-        ch00_stack = create_stack(ch00_paths)
-        ch01_stack = create_stack(ch01_paths)
-
-        return ch00_stack, ch01_stack
