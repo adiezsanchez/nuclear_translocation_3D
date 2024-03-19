@@ -6,7 +6,7 @@ Checking nuclear translocation of proteins using Voronoi-Otsu labeling and label
 
 1. In order to run these Jupyter notebooks and .py scripts you will need to familiarize yourself with the use of Python virtual environments using Mamba. See instructions [here](https://biapol.github.io/blog/mara_lampert/getting_started_with_mambaforge_and_python/readme.html).
 
-2. Then you will need to create a virtual environment either using the following command:
+2. Then you will need to create a virtual environment using the following command:
 
    <code>mamba create -n nuclear_translocation python=3.9 devbio-napari boto3 plotly pyqt -c conda-forge</code>
 

@@ -11,7 +11,7 @@ import numpy as np
 
 
 def read_images(directory_path):
-    """Reads all the images in the input path and organizes them according to the well_id"""
+    """Reads all the images in the input path and organizes them according to the position_id"""
     # Define the directory containing your files
     directory_path = Path(directory_path)
 
